@@ -2,6 +2,20 @@ use std::{collections::HashMap, env};
 
 use itertools::multipeek;
 
+struct Binary {
+    left: Box<Expression>,
+    operator: Token,
+    right: Box<Expression>,
+}
+
+enum Expression {
+    Literal(Token),
+    Grouping(Box<Expression>),
+    Unary(Box<Expression>, Token),
+    // Binary(Box<Expression>, Token, Box<Expression>),
+    Binary(Binary),
+}
+
 #[derive(Debug, Clone)]
 enum TokenType {
     LeftParent,
@@ -114,7 +128,6 @@ fn run_prompt() {
         buffer.clear();
     }
 }
-
 fn scan_tokens(buffer: &str) -> Vec<Token> {
     // todo, make current start increment when iterating
 
@@ -193,16 +206,28 @@ fn scan_tokens(buffer: &str) -> Vec<Token> {
                 }
             }
             '/' => {
-                if iter.peek() == Some(&'/') {
-                    // ini komentar, skip sampe end of line
-                    while let Some(c) = iter.next() {
-                        if c == '\n' {
-                            line += 1;
-                            break;
+                match iter.peek() {
+                    Some(&'/') => {
+                        // ini komentar, skip sampe end of line
+                        while let Some(c) = iter.next() {
+                            if c == '\n' {
+                                line += 1;
+                                break;
+                            }
                         }
                     }
-                } else {
-                    tokens.push(Token::new(TokenType::SLASH, c.to_string(), line));
+                    Some(&'*') => {
+                        // ini komentar, skip sampe ketemu */
+                        while let Some(c) = iter.next() {
+                            if c == '\n' {
+                                line += 1;
+                            } else if c == '*' && iter.peek() == Some(&'/') {
+                                iter.next();
+                                break;
+                            }
+                        }
+                    }
+                    _ => tokens.push(Token::new(TokenType::SLASH, c.to_string(), line)),
                 }
             }
 
